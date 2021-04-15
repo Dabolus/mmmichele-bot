@@ -24,7 +24,6 @@ const run = async () => {
 
   console.log(`Text: ${text}`);
 
-  // Use Google Cloud Natural Language API to get the most salient word from the text
   console.log('Getting the most salient word');
   const words = await getWords(text);
 

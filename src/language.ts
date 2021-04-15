@@ -1,26 +1,44 @@
-import language from '@google-cloud/language';
-
-export const languageClient = new language.LanguageServiceClient();
+const punctuationRegex = new RegExp(
+  /[\.,-\/#!$%\^&\*;:{}=\-_`~()@\+\?><\[\]\+]/g,
+);
 
 export interface GetWordResult {
   name: string;
   salience?: number;
 }
 
-export const getWords = async (content: string): Promise<GetWordResult[]> => {
-  const [{ entities }] = await languageClient.analyzeEntities({
-    document: {
-      content,
-      language: 'it',
-      type: 'PLAIN_TEXT',
-    },
-  });
+export interface WordMatch {
+  readonly word: string;
+  readonly count: number;
+}
 
-  return (entities || [])
-    .sort((a, b) => (b.salience ?? 0) - (a.salience ?? 0))
-    .slice(0, 3)
-    .map(({ name, salience }) => ({
-      name: name!.toLowerCase(),
-      salience: salience ?? undefined,
-    }));
+export const getWords = async (content: string): Promise<GetWordResult[]> => {
+  const words = content
+    .replace(/\r?\n|\r/g, ' ')
+    .replace(punctuationRegex, ' ')
+    .replace(/\s{2,}/g, ' ')
+    .split(' ')
+    .filter((word) => word.length > 3);
+
+  const wordMatchCounts = words.reduce<readonly WordMatch[]>(
+    (matches, word) => {
+      const isAlreadyMatched = matches.findIndex(
+        ({ word: foundWord }) => `${foundWord}` === `${word}`,
+      );
+
+      return isAlreadyMatched > -1
+        ? [
+            ...matches.slice(0, isAlreadyMatched),
+            { word, count: matches[isAlreadyMatched].count + 1 },
+            ...matches.slice(isAlreadyMatched + 1),
+          ]
+        : [...matches, { word, count: 1 }];
+    },
+    [],
+  );
+
+  return wordMatchCounts.map(({ word: name, count }) => ({
+    name,
+    salience: count / wordMatchCounts.length,
+  }));
 };
