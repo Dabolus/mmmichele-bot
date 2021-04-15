@@ -7,9 +7,7 @@ export interface GetWordResult {
   salience?: number;
 }
 
-export const getWord = async (
-  content: string,
-): Promise<GetWordResult | null> => {
+export const getWords = async (content: string): Promise<GetWordResult[]> => {
   const [{ entities }] = await languageClient.analyzeEntities({
     document: {
       content,
@@ -18,14 +16,11 @@ export const getWord = async (
     },
   });
 
-  if (!entities?.[0]?.name) {
-    return null;
-  }
-
-  const [{ name, salience }] = entities;
-
-  return {
-    name: name.toLowerCase(),
-    salience: salience || undefined,
-  };
+  return (entities || [])
+    .sort((a, b) => (b.salience ?? 0) - (a.salience ?? 0))
+    .slice(0, 3)
+    .map(({ name, salience }) => ({
+      name: name!.toLowerCase(),
+      salience: salience ?? undefined,
+    }));
 };

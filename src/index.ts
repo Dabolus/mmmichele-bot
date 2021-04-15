@@ -6,7 +6,7 @@ import {
   setChatTitle,
 } from './telegram';
 import { initialize } from './cache';
-import { getWord } from './language';
+import { getWords } from './language';
 import { getImage } from './search';
 
 const run = async () => {
@@ -26,36 +26,56 @@ const run = async () => {
 
   // Use Google Cloud Natural Language API to get the most salient word from the text
   console.log('Getting the most salient word');
-  const word = await getWord(text);
+  const words = await getWords(text);
 
-  if (!word) {
+  if (words.length < 1) {
     console.log('No salient words detected');
     await sendMessage(`Sembra che oggi non abbiate shitpostato 🤔`);
     return;
   }
 
-  console.log(`Word: ${word.name}`);
-  if (word.salience) {
-    console.log(`Salience: ${word.salience}`);
-  }
+  console.log(
+    `Words: ${words
+      .map(
+        ({ name, salience }) =>
+          `${name}${salience ? ` (salience: ${salience})` : ''}`,
+      )
+      .join(', ')}`,
+  );
 
-  console.log('Sending message');
+  const [mainWord, ...otherWords] = words;
+
+  console.log('Sending info message');
   await sendMessage(
-    `Oggi avete shitpostato su: ${word.name}${
-      word.salience ? ` (rilevanza: ${(word.salience * 100).toFixed(2)}%)` : ''
+    `Oggi avete shitpostato su: ${mainWord.name}${
+      mainWord.salience
+        ? ` (rilevanza: ${(mainWord.salience * 100).toFixed(2)}%)`
+        : ''
     }`,
+  );
+  await sendMessage(
+    `Altre parole rilevanti:\n${otherWords
+      .map(
+        (word) =>
+          `- ${word.name}${
+            word.salience
+              ? ` (rilevanza: ${(word.salience * 100).toFixed(2)}%)`
+              : ''
+          }`,
+      )
+      .join('\n')}`,
   );
 
   console.log('Setting chat title');
   await setChatTitle(
-    `${word.name[0].toUpperCase()}${word.name
+    `${mainWord.name[0].toUpperCase()}${mainWord.name
       .slice(1)
       .toLowerCase()} shitposting`,
   );
-  await setChatDescription(`Oggi stiamo shitpostando su: ${word.name}`);
+  await setChatDescription(`Oggi stiamo shitpostando su: ${mainWord.name}`);
 
   console.log('Getting the image');
-  const image = await getImage(word.name);
+  const image = await getImage(mainWord.name);
 
   if (!image) {
     console.log('No image found');
