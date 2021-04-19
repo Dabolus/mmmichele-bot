@@ -1,26 +1,31 @@
-import language from '@google-cloud/language';
-
-export const languageClient = new language.LanguageServiceClient();
+import exclusions from './exclusions.yaml';
 
 export interface GetWordResult {
   name: string;
-  salience?: number;
+  count: number;
 }
 
 export const getWords = async (content: string): Promise<GetWordResult[]> => {
-  const [{ entities }] = await languageClient.analyzeEntities({
-    document: {
-      content,
-      language: 'it',
-      type: 'PLAIN_TEXT',
-    },
-  });
+  const wordsScoring = content
+    // Remove all non word or space characters
+    .replace(/[^a-zA-ZÀ-ÖÙ-öù-ÿĀ-žḀ-ỿ0-9ø\s]/g, '')
+    // Split on spaces to get an array with all the words
+    .split(/\s+/)
+    // Normalize the words
+    .map((word) => word.toLowerCase().trim())
+    // Make sure we don't include empty or excluded words
+    .filter((word) => !!word && !exclusions.includes(word))
+    // Compute the scores
+    .reduce<Record<string, number>>(
+      (acc, word) => ({
+        ...acc,
+        [word]: (acc[word] || 0) + 1,
+      }),
+      {},
+    );
 
-  return (entities || [])
-    .sort((a, b) => (b.salience ?? 0) - (a.salience ?? 0))
-    .slice(0, 3)
-    .map(({ name, salience }) => ({
-      name: name!.toLowerCase(),
-      salience: salience ?? undefined,
-    }));
+  return Object.entries(wordsScoring)
+    .map(([name, count]) => ({ name, count }))
+    .sort((a, b) => b.count - a.count)
+    .slice(0, 3);
 };

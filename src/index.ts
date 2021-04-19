@@ -24,22 +24,19 @@ const run = async () => {
 
   console.log(`Text: ${text}`);
 
-  // Use Google Cloud Natural Language API to get the most salient word from the text
-  console.log('Getting the most salient word');
+  // Get the most repeated words from the text
+  console.log('Getting the most repeated words');
   const words = await getWords(text);
 
   if (words.length < 1) {
-    console.log('No salient words detected');
+    console.log('No words detected');
     await sendMessage(`Sembra che oggi non abbiate shitpostato 🤔`);
     return;
   }
 
   console.log(
     `Words: ${words
-      .map(
-        ({ name, salience }) =>
-          `${name}${salience ? ` (salience: ${salience})` : ''}`,
-      )
+      .map(({ name, count }) => `${name} (count: ${count})`)
       .join(', ')}`,
   );
 
@@ -47,22 +44,11 @@ const run = async () => {
 
   console.log('Sending info message');
   await sendMessage(
-    `Oggi avete shitpostato su: ${mainWord.name}${
-      mainWord.salience
-        ? ` (rilevanza: ${(mainWord.salience * 100).toFixed(2)}%)`
-        : ''
-    }`,
+    `Oggi avete shitpostato su: ${mainWord.name} (menzioni: ${mainWord.count})`,
   );
   await sendMessage(
     `Altre parole rilevanti:\n${otherWords
-      .map(
-        (word) =>
-          `- ${word.name}${
-            word.salience
-              ? ` (rilevanza: ${(word.salience * 100).toFixed(2)}%)`
-              : ''
-          }`,
-      )
+      .map((word) => `- ${word.name} (menzioni: ${word.count})`)
       .join('\n')}`,
   );
 
