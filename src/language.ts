@@ -12,9 +12,9 @@ export const getWords = async (content: string): Promise<GetWordResult[]> => {
     // Split on spaces to get an array with all the words
     .split(/\s+/)
     // Normalize the words
-    .map((word) => word.toLowerCase().trim())
+    .map(word => word.toLowerCase().trim())
     // Make sure we don't include empty or excluded words
-    .filter((word) => !!word && !exclusions.includes(word))
+    .filter(word => !!word && word.length > 2 && !exclusions.includes(word))
     // Compute the scores
     .reduce<Record<string, number>>(
       (acc, word) => ({
